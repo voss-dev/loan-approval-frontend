@@ -29,6 +29,7 @@ export default function LoanForm({ onResult }) {
     // setErrors - When Django says something is wrong
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
+    const [slow, setSlow] = useState(false); // slow is true only when the request has bee running longer than 5 seconds
 
     function handleChange(e) {
         setValues({ ...values, [e.target.name]: e.target.value });
@@ -37,6 +38,15 @@ export default function LoanForm({ onResult }) {
     async function handleSubmit(e) {
         e.preventDefault();
         setLoading(true); // Button becomes "Checking ..." and disabled
+
+        // setTimeout runs a function once after a delay, here 5000 milliseconds
+        // If the request arrives sooner, we cancel it
+        // So after 5 seconds, slow = true
+        // Check the finally block
+        const slowTimer = setTimeout(() => setSlow(true), 5000);
+
+
+
         setErrors({});  // Clear old errors
         onResult(null);
 
@@ -59,6 +69,8 @@ export default function LoanForm({ onResult }) {
         } catch (err) {
             setErrors(err.fieldErrors || { form: ["Could not reach the server."] })
         } finally {
+            clearTimeout(slowTimer); // Cancels the 5-second timer if Django replied before the 5 seconds
+            setSlow(false); // Ensures the message disappears after every request
             setLoading(false);
         }
     }
@@ -104,6 +116,11 @@ export default function LoanForm({ onResult }) {
             <button disabled={loading} className="rounded bg-blue-600 px-4 py-2 text-white">
                 {loading ? "Checking..." : "Check my application"}
             </button>
+            {loading && slow && (
+                <p className="text-sm text-amber-300">
+                    Waking up the server. On the free tier this can take up to a minute.
+                </p>
+            )}
 
         </form>
     );
